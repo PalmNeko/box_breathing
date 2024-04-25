@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>I want to focus on Work</title>
+	<style>
+		body {
+			top: 10vh;
+			position: relative;
+		}
+		main {
+			text-align: center;
+		}
+		.unvisible {
+			display:none;
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<div id="preparing-breathe" class="unvisible">
+			<h1>準備１ー深呼吸</h1>
+			<!-- ボックスブレス -->
+			<ol>
+				<li>４秒かけて吸う</li>
+				<li>４秒息を止める</li>
+				<li>４秒かけて吐く</li>
+				<li>４秒息を止める</li>
+			</ol>
+		</div>
+		<div id="preparing-stare" class="unvisible">
+			<h1>準備２ぼーっとする</h1>
+			<h2>一点を見つめましょう<p>30秒</p></h2>
+		</div>
+		</div>
+		<div id="working" class="unvisible">
+			<h1>作業中</h1>
+			<h2>定期的にぼーっとしましょう。<p>10秒</p></h2>
+		</div>
+		<div id="interval" class="unvisible">
+			<h1>何もしないで５分ほど座わりましょう。</h1>
+		</div>
+		<div id="timer">
+			<h1 id="heading"></h1>
+			<h1>残り時間</h1>
+			<div class="time">1時間２４分</div>
+		</div>
+		<div id="ui">
+			<button id="start-btn">開始</button>
+			<button id="stop-btn">停止</button>
+			<button id="reset-btn">リセット</button>
+			<button id="skip-btn">スキップ</button>
+		</div>
+	</main>
+	<script type="text/javascript">
+		class Timer {
+			// -- public
+			constructor(element) {
+				this.element = element;
+				this.onTimePassedHandlers = [];
+				this.onUpdateHandlers = [];
+				this.timeSec = 0;
+				this.availableUpdate = false;
+				this.intervalId = undefined;
+				this.settedTime = 0;
+				this.updateText();
+			}
+
+			setTime(secound) {
+				this.timeSec = secound;
+				this.settedTime = secound;
+				this.updateText();
+			}
+
+			resetTime() {
+				this.setTime(this.settedTime);
+			}
+
+			stopTime() {
+				this.availableUpdate = false;
+				clearInterval(this.intervalId);
+			}
+
+			startTime() {
+				if (this.availableUpdate == true)
+					return;
+				this.availableUpdate = true;
+				this.intervalId = setInterval(this.updateTimer.bind(this), 1000);
+			}
+
+			addEventHandlerOnTimePassed(handler) {
+				this.onTimePassedHandlers.push(handler);
+			}
+
+			addEventHandlerOnUpdate(handler) {
+				this.onUpdateHandlers.push(handler);
+			}
+
+			isStop() {
+				return ! this.availableUpdate;
+			}
+
+			// -- private
+			updateTimer() {
+				if (this.availableUpdate == false)
+					return ;
+				this.timeSec -= 1;
+				if (this.timeSec < 0)
+					this.timeSec = 0;
+
+				this.updateText();
+				for (const handler of this.onUpdateHandlers) {
+					handler(this.timeSec);
+				}
+				if (this.timeSec <= 0) {
+					this.stopTime();
+					for (const handler of this.onTimePassedHandlers) {
+						handler();
+					}
+				}
+			}
+
+			updateText() {
+				this.element.innerText = this.toText(this.timeSec);
+			}
+
+			toText(timeSec) {
+				let time = timeSec;
+				const secound = time % 60;
+				const minute = Math.trunc(time / 60) % 60;
+				time = time / 60;
+				const hour = Math.trunc(time / 60);
+				return `${hour}時間${minute}分${secound}秒`
+			}
+		}
+
+		main();
+
+		function setConfig(config, timer) {
+			heading = document.querySelector('#heading');
+			heading.innerText = config.heading;
+			explainElement = document.getElementById(config.id);
+			explainElement.classList.remove('unvisible');
+			timer.setTime(config.time);
+			if (config.isStop == true)
+				timer.stopTime();
+			else
+				timer.startTime();
+		}
+
+		function clearWork(config) {
+			explainElement = document.getElementById(config.id);
+			explainElement.classList.add('unvisible');
+		}
+
+		function main() {
+			const breathe = [
+				{heading: "４秒かけて吸う", id: "preparing-breathe", time: 4, isStop: false},
+				{heading: "４秒息を止める", id: "preparing-breathe", time: 4, isStop: false},
+				{heading: "４秒かけて吐く", id: "preparing-breathe", time: 4, isStop: false},
+				{heading: "４秒息を止める", id: "preparing-breathe", time: 4, isStop: false},
+			]
+			const repeatedBreathe = [];
+			for (let i = 0; i < 10; i++) {
+				for (const a of breathe) {
+					conf = {...a};
+					conf.heading += `（${i + 1} / 10）`
+					repeatedBreathe.push(conf);
+				}
+			}
+			const lst = [
+				{heading: "４秒かけて吸う", id: "preparing-breathe", time: 0, isStop: true},
+				...repeatedBreathe,
+				{heading: "一点を見つめる", id: "preparing-stare", time: 30, isStop: true},
+				{heading: "定期的にぼーっとしましょう。", id: "working", time: 25 * 60, isStop: true},
+				{heading: "何もしないで５分ほど座わりましょう。", id: "interval", time: 5 * 60, isStop: true},
+			]
+			timer = new Timer(document.querySelector('#timer .time'));
+			let now_idx = 0;
+			setConfig(lst[now_idx], timer);
+			goNext = () => {
+				clearWork(lst[now_idx]);
+				now_idx += 1;
+				now_idx %= lst.length;
+				setConfig(lst[now_idx], timer);
+			}
+			timer.addEventHandlerOnTimePassed(goNext)
+
+			stopButton = document.querySelector('#stop-btn');
+			startButton = document.querySelector('#start-btn');
+			resetButton = document.querySelector('#reset-btn');
+			skipButton = document.querySelector('#skip-btn');
+
+			stopButton.addEventListener('click', () => {
+				timer.stopTime();
+			});
+			startButton.addEventListener('click', () => {
+				timer.startTime();
+			});
+			resetButton.addEventListener('click', () => {
+				timer.resetTime();
+			});
+			skipButton.addEventListener('click', goNext);
+		}
+	</script>
+</body>
+</html>
